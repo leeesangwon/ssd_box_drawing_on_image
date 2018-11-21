@@ -1,8 +1,10 @@
+from __future__ import print_function
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
 import glob
+import time
 
 plt.rcParams['figure.figsize'] = (10, 10)
 plt.rcParams['image.interpolation'] = 'nearest'
@@ -45,17 +47,18 @@ def draw_bbox_on_images(input_folder, output_folder, labelmap_file, model_def, m
     net.blobs['data'].reshape(1,3,image_resize,image_resize)
 
     input_list = glob.glob(os.path.join(input_folder, "*.jpg"))
+    input_list += glob.glob(os.path.join(input_folder, "*.JPG"))
     input_list += glob.glob(os.path.join(input_folder, "*.png"))
+    input_list += glob.glob(os.path.join(input_folder, "*.PNG"))
     
     assert input_list, "input_folder(%s) doesn't have image file(jpeg or png format)" % input_folder
-
-    for input_image in input_list:
+    for i, input_image in enumerate(input_list):
         output_image = os.path.join(output_folder, os.path.basename(input_image))
         draw_bbox_on_image(
             input_image_path=input_image,
             output_image_path=output_image,
             labelmap=labelmap, net=net, transformer=transformer)
-
+        print("%d / %d" % (i+1, len(input_list)))
 
 def get_labelmap(labelmap_file):
     with open(labelmap_file, 'r') as f:
@@ -82,7 +85,7 @@ def get_transformer(net):
 
 def draw_bbox_on_image(input_image_path, output_image_path, labelmap, net, transformer):
     image = caffe.io.load_image(input_image_path) # image set path
-    fig = plt.figure()
+    fig = plt.figure(figsize=(16,9), dpi=120)
     ax = fig.add_subplot(1, 1, 1)
     ax.set_aspect('equal')
     ax.imshow(image, aspect='equal')
@@ -129,9 +132,11 @@ def draw_bbox_on_image(input_image_path, output_image_path, labelmap, net, trans
         color = colors[label]
         ax.add_patch(plt.Rectangle(*coords, fill=False, edgecolor=color, linewidth=2))
         ax.text(xmin, ymin, display_txt, bbox={'facecolor':color, 'alpha':0.5})
-    
+
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
     plt.savefig(output_image_path, transparent=True, bbox_inches=extent)
     ax.clear()
+    plt.close(fig)
     
 
 def get_labelname(labelmap, labels):
