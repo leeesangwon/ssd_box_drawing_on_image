@@ -11,7 +11,7 @@ plt.rcParams['image.interpolation'] = 'nearest'
 plt.rcParams['image.cmap'] = 'gray'
 
 # Make sure that caffe is on the python path:
-caffe_root = '/home/sangwon/Projects/caffe'  # this file is expected to be in {caffe_root}/examples
+caffe_root = '/home/sangwon/Projects/refinedet/RefineDet'  # this file is expected to be in {caffe_root}/examples
 import os
 os.chdir(caffe_root)
 import sys
@@ -85,11 +85,6 @@ def get_transformer(net):
 
 def draw_bbox_on_image(input_image_path, output_image_path, labelmap, net, transformer):
     image = caffe.io.load_image(input_image_path) # image set path
-    fig = plt.figure(figsize=(16,9), dpi=120)
-    ax = fig.add_subplot(1, 1, 1)
-    ax.set_aspect('equal')
-    ax.imshow(image, aspect='equal')
-    ax.axis('off')
     
     transformed_image = transformer.preprocess('data', image)
     net.blobs['data'].data[...] = transformed_image
@@ -116,23 +111,31 @@ def draw_bbox_on_image(input_image_path, output_image_path, labelmap, net, trans
 
     colors = plt.cm.hsv(np.linspace(0, 1, 21)).tolist()
 
-    # get axis extent
+    # draw bounding boxes
+    drawing_labels = ['bicycle', 'bus', 'car', 'motorbike', 'person', 'train']
+    fig = plt.figure(figsize=(16,9), dpi=120)
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_aspect('equal')
+    ax.imshow(image, aspect='equal')
+    ax.axis('off')
     extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())    
 
     for i in xrange(top_conf.shape[0]):
+        label = int(top_label_indices[i])
+        label_name = top_labels[i]
+        if label_name not in drawing_labels:
+            continue
         xmin = int(round(top_xmin[i] * image.shape[1]))
         ymin = int(round(top_ymin[i] * image.shape[0]))
         xmax = int(round(top_xmax[i] * image.shape[1]))
         ymax = int(round(top_ymax[i] * image.shape[0]))
         score = top_conf[i]
-        label = int(top_label_indices[i])
-        label_name = top_labels[i]
         display_txt = '%s: %.2f'%(label_name, score)
         coords = (xmin, ymin), xmax-xmin+1, ymax-ymin+1
         color = colors[label]
         ax.add_patch(plt.Rectangle(*coords, fill=False, edgecolor=color, linewidth=2))
         ax.text(xmin, ymin, display_txt, bbox={'facecolor':color, 'alpha':0.5})
-
+        
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
     plt.savefig(output_image_path, transparent=True, bbox_inches=extent)
     ax.clear()
@@ -172,11 +175,11 @@ if __name__=="__main__":
     #             image_resize=image_resize)
 
     input_folder ="/home/sangwon/Projects/ssd_512_test/target_image"
-    output_folder="/home/sangwon/Projects/ssd_512_test/result_image_300"
-    labelmap_file = '/home/sangwon/Projects/caffe/data/VOC0712/labelmap_voc.prototxt'
-    model_def = '/home/sangwon/Projects/caffe/models/VGGNet/VOC0712/SSD_300x300/deploy.prototxt'
-    model_weights = '/home/sangwon/Projects/caffe/models/VGGNet/VOC0712/SSD_300x300/VGG_VOC0712_SSD_300x300_iter_120000.caffemodel'
-    image_resize = 300
+    output_folder="/home/sangwon/Projects/ssd_512_test/result_image_refinedet320"
+    labelmap_file = '/home/sangwon/Projects/ssd/caffe/data/VOC0712/labelmap_voc.prototxt'
+    model_def = '/home/sangwon/Projects/ssd_512_test/models/RefineDet320X320_VOC0712Plus/deploy.prototxt'
+    model_weights = '/home/sangwon/Projects/ssd_512_test/models/RefineDet320X320_VOC0712Plus/VOC0712Plus_refinedet_vgg16_320x320_iter_240000.caffemodel'
+    image_resize = 320
     
     # main(input_folder=input_folder,
     #     output_folder=output_folder,
@@ -185,7 +188,7 @@ if __name__=="__main__":
     #     model_weights=model_weights,
     #     image_resize=image_resize)
 
-    for city in ['frankfurt', 'lindau', 'munster']:
+    for city in ['stuttgart_00', 'stuttgart_01', 'stuttgart_02']:
         main(input_folder=os.path.join(input_folder, city),
             output_folder=os.path.join(output_folder, city),
             labelmap_file=labelmap_file,
